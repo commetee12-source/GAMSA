@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import { generateAuditDocuments } from './services/geminiService';
 import { GeneratedDoc } from './types';
 import { Part } from '@google/genai';
+import * as mammoth from 'mammoth';
 import { 
   FileText, 
   Clipboard, 
@@ -66,6 +67,10 @@ const App: React.FC = () => {
           const textReader = new FileReader();
           textReader.onload = (ev) => setAuditResult(ev.target?.result as string);
           textReader.readAsText(file);
+        } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.name.endsWith('.docx')) {
+          const arrayBuffer = await file.arrayBuffer();
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          setAuditResult(result.value);
         }
       } else {
         setTemplateFile(fileState);
@@ -73,6 +78,10 @@ const App: React.FC = () => {
           const textReader = new FileReader();
           textReader.onload = (ev) => setTemplate(ev.target?.result as string);
           textReader.readAsText(file);
+        } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.name.endsWith('.docx')) {
+          const arrayBuffer = await file.arrayBuffer();
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          setTemplate(result.value);
         }
       }
     } catch (err) {
@@ -252,14 +261,14 @@ const App: React.FC = () => {
               <label className="text-xs font-bold text-[#004792] cursor-pointer hover:bg-blue-100 px-3 py-1.5 rounded-lg border border-blue-200 transition-all bg-blue-50 flex items-center gap-2">
                 <FileUp className="w-3.5 h-3.5" />
                 문서 업로드
-                <input type="file" accept=".txt,.pdf" className="hidden" onChange={(e) => handleFileUpload(e, 'audit')} />
+                <input type="file" accept=".txt,.pdf,.docx" className="hidden" onChange={(e) => handleFileUpload(e, 'audit')} />
               </label>
             </div>
             <div className="p-6">
               <textarea 
                 value={auditResult}
                 onChange={(e) => setAuditResult(e.target.value)}
-                placeholder="지적사항, 위반사항 등 원천 데이터를 여기에 입력하거나 PDF 파일을 업로드하세요."
+                placeholder="지적사항, 위반사항 등 원천 데이터를 여기에 입력하거나 PDF, DOCX 파일을 업로드하세요."
                 className="w-full h-56 p-5 bg-white border-2 border-slate-100 rounded-xl text-sm focus:border-[#004792] focus:ring-0 outline-none transition-all resize-none placeholder:text-slate-300 font-medium leading-relaxed"
               />
               {auditFile && (
@@ -288,14 +297,14 @@ const App: React.FC = () => {
               <label className="text-xs font-bold text-[#004792] cursor-pointer hover:bg-blue-100 px-3 py-1.5 rounded-lg border border-blue-200 transition-all bg-blue-50 flex items-center gap-2">
                 <FileUp className="w-3.5 h-3.5" />
                 서식 업로드
-                <input type="file" accept=".txt,.pdf" className="hidden" onChange={(e) => handleFileUpload(e, 'template')} />
+                <input type="file" accept=".txt,.pdf,.docx" className="hidden" onChange={(e) => handleFileUpload(e, 'template')} />
               </label>
             </div>
             <div className="p-6">
               <textarea 
                 value={template}
                 onChange={(e) => setTemplate(e.target.value)}
-                placeholder="확인서, 처분서 등 결과물이 따라야 할 양식 문서를 업로드하거나 텍스트를 입력하세요."
+                placeholder="확인서, 처분서 등 결과물이 따라야 할 양식 문서를 업로드(PDF, DOCX)하거나 텍스트를 입력하세요."
                 className="w-full h-56 p-5 bg-white border-2 border-slate-100 rounded-xl text-sm focus:border-[#004792] focus:ring-0 outline-none transition-all resize-none text-slate-500 placeholder:text-slate-300 font-medium leading-relaxed"
               />
               {templateFile && (
@@ -320,10 +329,10 @@ const App: React.FC = () => {
           <button 
             onClick={handleGenerate}
             disabled={isGenerating}
-            className={`flex items-center gap-4 px-12 py-5 rounded-2xl font-black text-xl shadow-[0_10px_30px_rgba(0,71,146,0.3)] transition-all duration-300 border-b-4 ${
+            className={`flex items-center gap-4 px-12 py-5 rounded-2xl font-black text-xl shadow-[0_10px_30px_rgba(0,71,146,0.3)] transition-all duration-300 border border-[#002e5f] border-b-4 ${
               isGenerating 
               ? 'bg-slate-400 border-slate-500 cursor-not-allowed text-white translate-y-1 shadow-none' 
-              : 'bg-[#004792] border-[#002e5f] hover:bg-[#005bbd] text-white hover:-translate-y-1 active:translate-y-0.5 active:border-b-0'
+              : 'bg-[#004792] hover:bg-[#005bbd] text-white hover:-translate-y-1 active:translate-y-0.5 active:border-b-0'
             }`}
           >
             {isGenerating ? (
